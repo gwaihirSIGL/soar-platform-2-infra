@@ -1,3 +1,10 @@
+# Requirements
+
+```
+aws-cli
+terraform
+```
+
 # Installation
 
 ```
