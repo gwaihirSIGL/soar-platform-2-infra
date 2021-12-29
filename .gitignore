@@ -1,0 +1,9 @@
+# ssh keys
+soar-key
+soar-key.pub
+
+# terraform
+.terraform.lock.hcl
+.terraform/
+*.tfstate
+*.tfstate.backup
