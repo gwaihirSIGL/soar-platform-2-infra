@@ -28,6 +28,8 @@ resource "aws_instance" "front_instance" {
 
   key_name = aws_key_pair.main.key_name
 
+  depends_on = [aws_eip.back_lb]
+
   tags = {
     Name = "soar_front_instance"
   }
