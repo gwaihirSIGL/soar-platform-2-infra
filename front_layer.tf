@@ -1,6 +1,18 @@
-resource "aws_key_pair" "main" {
-  key_name   = "soar_ssh_key"
-  public_key = file("./soar-key.pub")
+resource "aws_subnet" "front" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "192.168.0.0/24"
+  availability_zone = "eu-west-3c"
+
+  tags = {
+    Name = "soar_front_subnet"
+  }
+
+  depends_on = [aws_internet_gateway.igw]
+}
+
+resource "aws_route_table_association" "igw-route-to-front" {
+  subnet_id      = aws_subnet.front.id
+  route_table_id = aws_route_table.main.id
 }
 
 resource "aws_instance" "front_instance" {
@@ -20,7 +32,6 @@ resource "aws_instance" "front_instance" {
     Name = "soar_front_instance"
   }
 
-
   user_data = <<EOF
 #!/bin/bash
 sudo yum update -y
@@ -35,8 +46,8 @@ sudo npm start 1>server_logs.txt 2>&1 &
 EOF
 }
 
-resource "aws_eip" "lb" {
+resource "aws_eip" "front_lb" {
   instance   = aws_instance.front_instance.id
   vpc        = true
-  depends_on = [aws_internet_gateway.front_gw]
+  depends_on = [aws_internet_gateway.igw]
 }
