@@ -1,9 +1,14 @@
 # Requirements
 
+CLI needed:
 ```
 aws-cli
 terraform
+ssh-keygen
 ```
+Generate a PAT with the following rights:
+- Full control of private repositories
+
 
 # Installation
 
@@ -15,7 +20,7 @@ aws configure
 terraform init
 
 # create ssh key to connect to instances
-ssh-keygen -f soar-key
+ssh-keygen -t rsa -b 4096 -f soar-key
 ```
 
 # Usage

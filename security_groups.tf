@@ -22,7 +22,7 @@ resource "aws_security_group" "allow_ssh" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    description      = "SSH from VPC"
+    description      = "SSH from anywhere"
     from_port        = 22
     to_port          = 22
     protocol         = "tcp"

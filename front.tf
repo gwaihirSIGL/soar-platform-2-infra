@@ -1,20 +1,3 @@
-
-resource "aws_internet_gateway" "front_gw" {
-  vpc_id = aws_vpc.main.id
-}
-
-resource "aws_subnet" "front" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "192.168.0.0/24"
-  availability_zone = "eu-west-3c"
-
-  tags = {
-    Name = "soar_front_subnet"
-  }
-
-  depends_on = [aws_internet_gateway.front_gw]
-}
-
 resource "aws_key_pair" "main" {
   key_name = "soar_ssh_key"
   public_key = file("./soar-key.pub")
@@ -40,7 +23,12 @@ resource "aws_instance" "front_instance" {
 
   user_data = <<EOF
 #!/bin/bash
-touch hello_world
+sudo yum update -y
+sudo yum install -y git
+mkdir app
+cd app
+echo "username
+github_PAT" | git clone git@github.com:gwaihirSIGL/soar-platform-2-front.git
 EOF
 }
 
