@@ -28,6 +28,8 @@ resource "aws_instance" "back_instance" {
 
   key_name = aws_key_pair.main.key_name
 
+  depends_on = [aws_eip.database_lb]
+
   tags = {
     Name = "soar_back_instance"
   }
@@ -41,6 +43,13 @@ mkdir /app
 cd /app
 git clone https://${var.gittoken}@github.com/gwaihirSIGL/soar-platform-2-back.git
 cd soar-platform-2-back/
+echo "PGHOST=${aws_eip.database_lb.public_dns}
+POSTGRES_USER=admin
+POSTGRES_PASSWORD=admin
+POSTGRES_DB=soar
+POSTGRES_PORT=5444
+PORT=4002
+" > .env
 sudo npm i
 sudo npm start 1>server_logs.txt 2>&1 &
 EOF

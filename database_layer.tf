@@ -19,7 +19,7 @@ resource "aws_instance" "database_instance" {
   ami           = "ami-0d3c032f5934e1b41"
   instance_type = "t2.micro"
   subnet_id     = aws_subnet.database.id
-  private_ip    = "192.168.1.50"
+  private_ip    = "192.168.2.50"
 
   security_groups = [
     aws_security_group.allow_ssh.id,
@@ -39,8 +39,8 @@ sudo yum install -y mysql-server
 EOF
 }
 
-resource "aws_eip" "databse_lb" {
-  instance   = aws_instance.back_instance.id
+resource "aws_eip" "database_lb" {
+  instance   = aws_instance.database_instance.id
   vpc        = true
   depends_on = [aws_internet_gateway.igw]
 }
