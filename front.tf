@@ -1,5 +1,5 @@
 resource "aws_key_pair" "main" {
-  key_name = "soar_ssh_key"
+  key_name   = "soar_ssh_key"
   public_key = file("./soar-key.pub")
 }
 
@@ -7,11 +7,11 @@ resource "aws_instance" "front_instance" {
   ami           = "ami-0d3c032f5934e1b41"
   instance_type = "t2.micro"
   subnet_id     = aws_subnet.front.id
-  private_ip = "192.168.0.50"
+  private_ip    = "192.168.0.50"
 
   security_groups = [
-      aws_security_group.allow_ssh.id,
-      aws_security_group.allow_every_outbound_traffic.id,
+    aws_security_group.allow_ssh.id,
+    aws_security_group.allow_every_outbound_traffic.id,
   ]
 
   key_name = aws_key_pair.main.key_name
@@ -25,10 +25,11 @@ resource "aws_instance" "front_instance" {
 #!/bin/bash
 sudo yum update -y
 sudo yum install -y git
-mkdir app
-cd app
-echo "username
-github_PAT" | git clone git@github.com:gwaihirSIGL/soar-platform-2-front.git
+mkdir /app
+cd /app
+touch "$gitusername"
+touch "$TF_VAR_gitusername"
+git clone https://$gitusername:$gittoken@github.com/gwaihirSIGL/soar-platform-2-front.git
 EOF
 }
 
