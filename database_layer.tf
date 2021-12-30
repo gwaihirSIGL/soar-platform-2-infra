@@ -10,7 +10,7 @@ resource "aws_subnet" "database" {
   depends_on = [aws_internet_gateway.igw]
 }
 
-resource "aws_route_table_association" "igw-route-to-back" {
+resource "aws_route_table_association" "igw-route-to-database" {
   subnet_id      = aws_subnet.database.id
   route_table_id = aws_route_table.main.id
 }
@@ -39,7 +39,7 @@ sudo yum install -y mysql-server
 EOF
 }
 
-resource "aws_eip" "back_lb" {
+resource "aws_eip" "databse_lb" {
   instance   = aws_instance.back_instance.id
   vpc        = true
   depends_on = [aws_internet_gateway.igw]
