@@ -25,11 +25,13 @@ resource "aws_instance" "front_instance" {
 #!/bin/bash
 sudo yum update -y
 sudo yum install -y git
+curl --silent --location https://rpm.nodesource.com/setup_12.x | sudo bash - && sudo yum -y install nodejs
 mkdir /app
 cd /app
-touch "$gitusername"
-touch "$TF_VAR_gitusername"
-git clone https://$gitusername:$gittoken@github.com/gwaihirSIGL/soar-platform-2-front.git
+git clone https://${var.gittoken}@github.com/gwaihirSIGL/soar-platform-2-front.git
+cd soar-platform-2-front/
+sudo npm i
+sudo npm start 1>server_logs.txt 2>&1 &
 EOF
 }
 
