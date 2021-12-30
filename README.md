@@ -32,4 +32,5 @@ ssh -i soar-key ec2-user@<instance-ip>
 ```
 
 # WIP
-ssh not working yet
+connect database to back
+conect back to front
