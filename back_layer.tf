@@ -49,7 +49,7 @@ POSTGRES_PASSWORD="${var.database_password}"
 POSTGRES_DB=soar
 POSTGRES_PORT=5444
 PORT=4002
-" > .env
+" > .env 2>err_env.log
 sudo npm i
 sudo npm start 1>server_logs.txt 2>&1 &
 EOF
