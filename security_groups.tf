@@ -41,8 +41,8 @@ resource "aws_security_group" "allow_ingress_mysql" {
 
   ingress {
     description = "ingress_mysql_connection"
-    from_port   = 5444
-    to_port     = 5444
+    from_port   = 3306
+    to_port     = 3306
     protocol    = "tcp"
     cidr_blocks = [aws_subnet.back.cidr_block]
   }
