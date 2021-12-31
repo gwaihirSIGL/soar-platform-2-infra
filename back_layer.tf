@@ -47,7 +47,7 @@ echo "PGHOST=${aws_eip.database_lb.public_dns}
 POSTGRES_USER=${var.database_user}
 POSTGRES_PASSWORD="${var.database_password}"
 POSTGRES_DB=soar
-POSTGRES_PORT=5444
+POSTGRES_PORT=3306
 PORT=4002
 " > .env 2>err_env.log
 sudo npm i
