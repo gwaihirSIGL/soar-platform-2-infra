@@ -48,14 +48,16 @@ DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.
 DROP DATABASE IF EXISTS test;
 DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
 FLUSH PRIVILEGES;
-_EOF_
+_EOF_ 2>err_mysql_secure_installation.log
 
 # Create DB user
 mysql --user=root -p${var.database_password} <<_EOF_
 CREATE USER '${var.database_user}'@'%' IDENTIFIED WITH mysql_native_password BY '${var.database_password}';
 GRANT ALL PRIVILEGES ON *.* TO '${var.database_user}'@'%';
 FLUSH PRIVILEGES;
-_EOF_
+_EOF_ 2>err_create_user.log
+
+touch "finished"
 EOF
 }
 
