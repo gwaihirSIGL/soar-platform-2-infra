@@ -35,6 +35,8 @@ resource "aws_instance" "database_instance" {
 
   user_data = <<EOF
 #!/bin/bash
+mkdir /app/
+cd /app/
 sudo yum update -y
 sudo wget https://dev.mysql.com/get/mysql80-community-release-el7-3.noarch.rpm && sudo rpm -Uvh mysql80-community-release-el7-3.noarch.rpm && sudo yum install -y mysql-server
 sudo systemctl start mysqld
@@ -48,14 +50,25 @@ DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.
 DROP DATABASE IF EXISTS test;
 DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
 FLUSH PRIVILEGES;
-_EOF_ 2>err_mysql_secure_installation.log
+_EOF_
+
+touch one
 
 # Create DB user
 mysql --user=root -p${var.database_password} <<_EOF_
 CREATE USER '${var.database_user}'@'%' IDENTIFIED WITH mysql_native_password BY '${var.database_password}';
 GRANT ALL PRIVILEGES ON *.* TO '${var.database_user}'@'%';
 FLUSH PRIVILEGES;
-_EOF_ 2>err_create_user.log
+_EOF_
+
+touch two
+
+# Create DB
+mysql --user=root -p${var.database_password} <<_EOF_
+CREATE DATABASE soar;
+USE soar;
+CREATE TABLE IF NOT EXISTS user (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255));
+_EOF_
 
 touch "finished"
 EOF

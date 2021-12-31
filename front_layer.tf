@@ -24,6 +24,7 @@ resource "aws_instance" "front_instance" {
   security_groups = [
     aws_security_group.allow_ssh.id,
     aws_security_group.allow_every_outbound_traffic.id,
+    aws_security_group.allow_http.id,
   ]
 
   key_name = aws_key_pair.main.key_name
