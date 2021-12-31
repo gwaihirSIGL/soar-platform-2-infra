@@ -44,9 +44,9 @@ mkdir /app
 cd /app
 git clone https://${var.gittoken}@github.com/gwaihirSIGL/soar-platform-2-back.git
 cd soar-platform-2-back/
-echo "PGHOST=${aws_eip.database_lb.public_dns}
-POSTGRES_USER=${var.database_user}
-POSTGRES_PASSWORD=${var.database_password}
+echo "PGHOST='${aws_eip.database_lb.public_dns}'
+POSTGRES_USER='${var.database_user}'
+POSTGRES_PASSWORD='${var.database_password}'
 POSTGRES_DB=soar
 POSTGRES_PORT=3306
 PORT=4002
