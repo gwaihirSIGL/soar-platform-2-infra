@@ -43,7 +43,7 @@ sudo systemctl start mysqld
 
 # Perform mysql_secure_installation cli non interractively
 tmp_password=$(sudo grep 'A temporary password is generated' /var/log/mysqld.log | cut -b 113-124 -)
-mysql --user=root -p'$tmp_password' --connect-expired-password <<_EOF_
+mysql --user=root -p"$tmp_password" --connect-expired-password <<_EOF_
 ALTER USER 'root'@'localhost' IDENTIFIED BY '${var.database_password}';
 DELETE FROM mysql.user WHERE User='';
 DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
@@ -53,14 +53,14 @@ FLUSH PRIVILEGES;
 _EOF_
 
 # Create DB user
-mysql --user=root -p'${var.database_password}' <<_EOF_
+mysql --user=root -p"${var.database_password}" <<_EOF_
 CREATE USER '${var.database_user}'@'%' IDENTIFIED WITH mysql_native_password BY '${var.database_password}';
 GRANT ALL PRIVILEGES ON *.* TO '${var.database_user}'@'%';
 FLUSH PRIVILEGES;
 _EOF_
 
 # Create DB
-mysql --user=root -p'${var.database_password}' <<_EOF_
+mysql --user=root -p"${var.database_password}" <<_EOF_
 CREATE DATABASE soar;
 USE soar;
 CREATE TABLE IF NOT EXISTS user (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255));
