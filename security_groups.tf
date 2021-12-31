@@ -34,6 +34,24 @@ resource "aws_security_group" "allow_ssh" {
   }
 }
 
+resource "aws_security_group" "allow_ingress_mysql" {
+  name        = "allow_ingress_mysql_connections_from_back_subnet"
+  description = "Allow ingress mysql connections from back subnet"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description = "ingress_mysql_connection"
+    from_port   = 5444
+    to_port     = 5444
+    protocol    = "tcp"
+    cidr_blocks = [aws_subnet.back.cidr_block]
+  }
+
+  tags = {
+    Name = "allow_mysql"
+  }
+}
+
 resource "aws_security_group" "allow_every_outbound_traffic" {
   name        = "allow_every_outbound_traffic"
   description = "Allow every outbond traffic"

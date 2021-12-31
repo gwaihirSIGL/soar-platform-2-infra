@@ -24,6 +24,7 @@ resource "aws_instance" "database_instance" {
   security_groups = [
     aws_security_group.allow_ssh.id,
     aws_security_group.allow_every_outbound_traffic.id,
+    aws_security_group.allow_ingress_mysql.id,
   ]
 
   key_name = aws_key_pair.main.key_name
@@ -35,7 +36,26 @@ resource "aws_instance" "database_instance" {
   user_data = <<EOF
 #!/bin/bash
 sudo yum update -y
-sudo yum install -y mysql-server
+sudo wget https://dev.mysql.com/get/mysql80-community-release-el7-3.noarch.rpm && sudo rpm -Uvh mysql80-community-release-el7-3.noarch.rpm && sudo yum install -y mysql-server
+sudo systemctl start mysqld
+
+# Perform mysql_secure_installation cli non interractively
+tmp_password=$(sudo grep 'password' /var/log/mysqld.log | cut -b 113-124 -)
+myql --user=root -p$tmp_password <<_EOF_
+UPDATE mysql.user SET Password=PASSWORD('${var.database_password}') WHERE User='root';
+DELETE FROM mysql.user WHERE User='';
+DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
+DROP DATABASE IF EXISTS test;
+DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
+FLUSH PRIVILEGES;
+_EOF_
+
+# Create DB user
+myql --user=root -p${var.database_password} <<_EOF_
+CREATE USER '${var.database_user}'@'%' IDENTIFIED BY '${var.database_password}';
+GRANT ALL PRIVILEGES ON *.* TO '${var.database_user}'@'%';
+FLUSH PRIVILEGES;
+_EOF_
 EOF
 }
 

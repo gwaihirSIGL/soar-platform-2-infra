@@ -44,8 +44,8 @@ cd /app
 git clone https://${var.gittoken}@github.com/gwaihirSIGL/soar-platform-2-back.git
 cd soar-platform-2-back/
 echo "PGHOST=${aws_eip.database_lb.public_dns}
-POSTGRES_USER=admin
-POSTGRES_PASSWORD=admin
+POSTGRES_USER=${var.database_user}
+POSTGRES_PASSWORD="${var.database_password}"
 POSTGRES_DB=soar
 POSTGRES_PORT=5444
 PORT=4002
@@ -54,6 +54,7 @@ sudo npm i
 sudo npm start 1>server_logs.txt 2>&1 &
 EOF
 }
+# mysql -h ec2-13-37-101-189.eu-west-3.compute.amazonaws.com -P 5444 -u root -p"l^/m,(b#D5~tn&H-5Q[" 
 
 resource "aws_eip" "back_lb" {
   instance   = aws_instance.back_instance.id
