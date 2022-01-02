@@ -42,6 +42,7 @@ mkdir /app
 cd /app
 git clone https://${var.gittoken}@github.com/gwaihirSIGL/soar-platform-2-front.git
 cd soar-platform-2-front/
+echo "REACT_APP_BASE_URL='${aws_eip.back_lb.public_dns}'" > .env
 sudo npm i
 sudo npm start 1>server_logs.txt 2>&1 &
 EOF
