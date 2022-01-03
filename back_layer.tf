@@ -182,27 +182,32 @@ resource "aws_cloudwatch_metric_alarm" "back_instance_cpu_alarm_scale_down" {
   ]
 }
 
-module "back_nat_gateway" {
-  source = "./modules/nat_gateway"
-
-  vpc_id = aws_vpc.main.id
-  internet_gateway_id = aws_internet_gateway.igw.id
-  nat_gateway_subnet_cidr = "192.168.14.0/24"
-  nat_gateway_az = "eu-west-3c"
-  instances_to_root_subnet_id = aws_subnet.back_subnet_eu_west_3c.id
+resource "aws_route_table_association" "route_to_igw" {
+  subnet_id      = aws_subnet.back_subnet_eu_west_3c.id
+  route_table_id = aws_route_table.route_to_igw.id
 }
 
-module "bastion_to_back_instances" {
-  source = "./modules/simple_host"
+# module "back_nat_gateway" {
+#   source = "./modules/nat_gateway"
 
-  subnet_id = module.back_nat_gateway.nat_gateway_subnet_id
-  key_name = aws_key_pair.main.key_name
-  vpc_security_group_ids = [
-    aws_security_group.allow_ssh.id,
-    aws_security_group.allow_every_outbound_traffic.id,
-  ]
-}
+#   vpc_id = aws_vpc.main.id
+#   internet_gateway_id = aws_internet_gateway.igw.id
+#   nat_gateway_subnet_cidr = "192.168.14.0/24"
+#   nat_gateway_az = "eu-west-3c"
+#   instances_to_root_subnet_id = aws_subnet.back_subnet_eu_west_3c.id
+# }
 
-output "back_bastion_ip" {
-  value = module.bastion_to_back_instances.instance_ip
-}
+# module "bastion_to_back_instances" {
+#   source = "./modules/simple_host"
+
+#   subnet_id = module.back_nat_gateway.nat_gateway_subnet_id
+#   key_name = aws_key_pair.main.key_name
+#   vpc_security_group_ids = [
+#     aws_security_group.allow_ssh.id,
+#     aws_security_group.allow_every_outbound_traffic.id,
+#   ]
+# }
+
+# output "back_bastion_ip" {
+#   value = module.bastion_to_back_instances.instance_ip
+# }

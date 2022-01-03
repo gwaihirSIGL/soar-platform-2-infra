@@ -12,7 +12,7 @@ resource "aws_subnet" "database" {
 
 resource "aws_route_table_association" "igw-route-to-database" {
   subnet_id      = aws_subnet.database.id
-  route_table_id = aws_route_table.root_to_igw.id
+  route_table_id = aws_route_table.route_to_igw.id
 }
 
 resource "aws_instance" "database_instance" {
