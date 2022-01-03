@@ -12,7 +12,7 @@ resource "aws_subnet" "front" {
 
 resource "aws_route_table_association" "igw-route-to-front" {
   subnet_id      = aws_subnet.front.id
-  route_table_id = aws_route_table.main.id
+  route_table_id = aws_route_table.root_to_igw.id
 }
 
 resource "aws_instance" "front_instance" {
@@ -21,7 +21,7 @@ resource "aws_instance" "front_instance" {
   subnet_id     = aws_subnet.front.id
   private_ip    = "192.168.0.50"
 
-  security_groups = [
+  vpc_security_group_ids = [
     aws_security_group.allow_ssh.id,
     aws_security_group.allow_every_outbound_traffic.id,
     aws_security_group.allow_http.id,
@@ -42,7 +42,7 @@ mkdir /app
 cd /app
 git clone https://${var.gittoken}@github.com/gwaihirSIGL/soar-platform-2-front.git
 cd soar-platform-2-front/
-echo "REACT_APP_BASE_URL='${aws_eip.back_lb.public_dns}'" > .env
+echo "REACT_APP_BASE_URL='${aws_elb.back_load_balancer.dns_name}'" > .env
 sudo npm i
 sudo npm start 1>server_logs.txt 2>&1 &
 EOF

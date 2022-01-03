@@ -1,6 +1,6 @@
 resource "aws_subnet" "back_subnet_eu_west_3b" {
   vpc_id            = aws_vpc.main.id
-  cidr_block        = "192.168.1.0/24"
+  cidr_block        = "192.168.10.0/24"
   availability_zone = "eu-west-3b"
 
   tags = {
@@ -12,7 +12,7 @@ resource "aws_subnet" "back_subnet_eu_west_3b" {
 
 resource "aws_subnet" "back_subnet_eu_west_3c" {
   vpc_id            = aws_vpc.main.id
-  cidr_block        = "192.168.1.0/24"
+  cidr_block        = "192.168.11.0/24"
   availability_zone = "eu-west-3c"
 
   tags = {
@@ -22,15 +22,15 @@ resource "aws_subnet" "back_subnet_eu_west_3c" {
   depends_on = [aws_internet_gateway.igw]
 }
 
-resource "aws_route_table_association" "igw_route_to_back_eu_west_3b" {
-  subnet_id      = aws_subnet.back_subnet_eu_west_3b.id
-  route_table_id = aws_route_table.main.id
-}
+# resource "aws_route_table_association" "igw_route_to_back_eu_west_3b" {
+#   subnet_id      = aws_subnet.back_subnet_eu_west_3b.id
+#   route_table_id = aws_route_table.root_to_igw.id
+# }
 
-resource "aws_route_table_association" "igw_route_to_back_eu_west_3c" {
-  subnet_id      = aws_subnet.back_subnet_eu_west_3c.id
-  route_table_id = aws_route_table.main.id
-}
+# resource "aws_route_table_association" "igw_route_to_back_eu_west_3c" {
+#   subnet_id      = aws_subnet.back_subnet_eu_west_3c.id
+#   route_table_id = aws_route_table.root_to_igw.id
+# }
 
 # resource "aws_instance" "back_instance" {
 #   ami           = "ami-0d3c032f5934e1b41"
@@ -99,12 +99,17 @@ resource "aws_launch_configuration" "back_instance_template" {
 
   user_data = <<EOF
 #!/bin/bash
-sudo yum update -y
-sudo yum install -y git
-curl --silent --location https://rpm.nodesource.com/setup_12.x | sudo bash - && sudo yum -y install nodejs
-mkdir /app
+sleep 30 # wait for yum to be ready
+mkdir -p /app
 cd /app
-git clone https://${var.gittoken}@github.com/gwaihirSIGL/soar-platform-2-back.git
+touch start
+sudo yum update -y 1>>server_logs.txt 2>&1
+touch updated
+sudo yum install -y git 1>>server_logs.txt 2>&1
+touch git
+curl --silent --location https://rpm.nodesource.com/setup_12.x | sudo bash - && sudo yum -y install nodejs 1>>server_logs.txt 2>&1
+touch npm
+git clone https://${var.gittoken}@github.com/gwaihirSIGL/soar-platform-2-back.git 1>>server_logs.txt 2>&1
 cd soar-platform-2-back/
 echo "PGHOST='${aws_eip.database_lb.public_dns}'
 POSTGRES_USER='${var.database_user}'
@@ -113,8 +118,8 @@ POSTGRES_DB=soar
 POSTGRES_PORT=3306
 PORT=4002
 " > .env
-sudo npm i
-sudo npm start 1>server_logs.txt 2>&1 &
+sudo npm i 1>>server_logs.txt 2>&1
+sudo npm start 1>>server_logs.txt 2>&1
 EOF
 
 }
@@ -128,7 +133,7 @@ resource "aws_autoscaling_group" "back_asg" {
   
   health_check_type    = "ELB"
   load_balancers = [
-    aws_elb.back_load_balancer.id
+    aws_elb.back_load_balancer.id,
   ]
 
   launch_configuration = aws_launch_configuration.back_instance_template.name
@@ -160,8 +165,9 @@ resource "aws_autoscaling_group" "back_asg" {
 
 }
 
+# Load Balancer operating at OSI 4th layer
 resource "aws_elb" "back_load_balancer" {
-  name = "back-elb"
+  name = "back-load-balancer"
 
   security_groups = [
     aws_security_group.allow_every_outbound_traffic.id,
@@ -176,10 +182,10 @@ resource "aws_elb" "back_load_balancer" {
   cross_zone_load_balancing   = true
 
   health_check {
-    healthy_threshold = 3
-    unhealthy_threshold = 3
-    timeout = 3
-    interval = 10
+    healthy_threshold = 2
+    unhealthy_threshold = 2
+    timeout = 40
+    interval = 45
     target = "HTTP:80/"   # FIXME
   }
 
@@ -213,7 +219,7 @@ resource "aws_cloudwatch_metric_alarm" "back_instance_cpu_alarm_scale_up" {
     AutoScalingGroupName = aws_autoscaling_group.back_asg.name
   }
 
-  alarm_description = "Monitor EC2 instance CPU utilization (increase)"
+  alarm_description = "EC2 CPU utilization increased : scaling up .."
   alarm_actions = [
     aws_autoscaling_policy.back_policy_scale_up.arn,
   ]
@@ -241,8 +247,42 @@ resource "aws_cloudwatch_metric_alarm" "back_instance_cpu_alarm_scale_down" {
     AutoScalingGroupName = aws_autoscaling_group.back_asg.name
   }
 
-  alarm_description = "Monitor EC2 instance CPU utilization (decrease)"
+  alarm_description = "EC2 CPU utilization decreased : scaling down .."
   alarm_actions = [
-    aws_autoscaling_policy.back_instance_cpu_alarm_scale_down.arn,
+    aws_autoscaling_policy.back_policy_scale_down.arn,
   ]
+}
+
+resource "aws_eip" "nat_gateway" {
+  vpc = true
+}
+
+resource "aws_nat_gateway" "nat_gateway" {
+  allocation_id = aws_eip.nat_gateway.id
+  subnet_id = aws_subnet.back_subnet_eu_west_3c.id
+  tags = {
+    "Name" = "NatGateway"
+  }
+}
+
+output "nat_gateway_ip" {
+  value = aws_eip.nat_gateway.public_ip
+}
+
+resource "aws_route_table" "root_to_ngw" {
+  vpc_id = aws_vpc.main.id
+  route {
+    cidr_block = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.nat_gateway.id
+  }
+}
+
+resource "aws_route_table_association" "igw_route_to_back_eu_west_3b" {
+  subnet_id      = aws_subnet.back_subnet_eu_west_3b.id
+  route_table_id = aws_route_table.root_to_ngw.id
+}
+
+resource "aws_route_table_association" "igw_route_to_back_eu_west_3c" {
+  subnet_id      = aws_subnet.back_subnet_eu_west_3c.id
+  route_table_id = aws_route_table.root_to_ngw.id
 }

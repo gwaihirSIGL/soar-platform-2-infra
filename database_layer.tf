@@ -1,6 +1,6 @@
 resource "aws_subnet" "database" {
   vpc_id            = aws_vpc.main.id
-  cidr_block        = "192.168.2.0/24"
+  cidr_block        = "192.168.20.0/24"
   availability_zone = "eu-west-3c"
 
   tags = {
@@ -12,16 +12,16 @@ resource "aws_subnet" "database" {
 
 resource "aws_route_table_association" "igw-route-to-database" {
   subnet_id      = aws_subnet.database.id
-  route_table_id = aws_route_table.main.id
+  route_table_id = aws_route_table.root_to_igw.id
 }
 
 resource "aws_instance" "database_instance" {
   ami           = "ami-0d3c032f5934e1b41"
   instance_type = "t2.micro"
   subnet_id     = aws_subnet.database.id
-  private_ip    = "192.168.2.50"
+  private_ip    = "192.168.20.50"
 
-  security_groups = [
+  vpc_security_group_ids = [
     aws_security_group.allow_ssh.id,
     aws_security_group.allow_every_outbound_traffic.id,
     aws_security_group.allow_ingress_mysql.id,
