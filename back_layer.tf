@@ -1,15 +1,3 @@
-# resource "aws_subnet" "back_subnet_eu_west_3b" {
-#   vpc_id            = aws_vpc.main.id
-#   cidr_block        = "192.168.10.0/24"
-#   availability_zone = "eu-west-3b"
-
-#   tags = {
-#     Name = "soar_back_subnet_eu_west_3b"
-#   }
-
-#   depends_on = [aws_internet_gateway.igw]
-# }
-
 resource "aws_subnet" "back_subnet_eu_west_3c" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = "192.168.11.0/24"
@@ -21,53 +9,6 @@ resource "aws_subnet" "back_subnet_eu_west_3c" {
 
   depends_on = [aws_internet_gateway.igw]
 }
-
-# resource "aws_route_table_association" "igw_route_to_back_eu_west_3b" {
-#   subnet_id      = aws_subnet.back_subnet_eu_west_3b.id
-#   route_table_id = aws_route_table.root_to_igw.id
-# }
-
-# resource "aws_instance" "back_instance" {
-#   ami           = "ami-0d3c032f5934e1b41"
-#   instance_type = "t2.micro"
-#   subnet_id     = aws_subnet.back.id
-#   private_ip    = "192.168.1.50"
-
-#   vpc_security_group_ids = [
-#     aws_security_group.allow_ssh.id,
-#     aws_security_group.allow_every_outbound_traffic.id,
-#     aws_security_group.allow_http.id,
-#   ]
-
-#   key_name = aws_key_pair.main.key_name
-
-#   depends_on = [aws_eip.database_lb]
-
-#   tags = {
-#     Name = "soar_back_instance"
-#   }
-
-#   user_data = <<EOF
-# #!/bin/bash
-# sudo yum update -y
-# sudo yum install -y git
-# curl --silent --location https://rpm.nodesource.com/setup_12.x | sudo bash - && sudo yum -y install nodejs
-# mkdir /app
-# cd /app
-# git clone https://${var.gittoken}@github.com/gwaihirSIGL/soar-platform-2-back.git
-# cd soar-platform-2-back/
-# echo "PGHOST='${aws_eip.database_lb.public_dns}'
-# POSTGRES_USER='${var.database_user}'
-# POSTGRES_PASSWORD='${var.database_password}'
-# POSTGRES_DB=soar
-# POSTGRES_PORT=3306
-# PORT=4002
-# " > .env
-# sudo npm i
-# sudo npm start 1>server_logs.txt 2>&1 &
-# EOF
-# }
-
 
 resource "aws_launch_configuration" "back_instance_template" {
   image_id      = "ami-0d3c032f5934e1b41"
@@ -139,7 +80,6 @@ resource "aws_autoscaling_group" "back_asg" {
   metrics_granularity = "1Minute"
 
   vpc_zone_identifier  = [
-    # aws_subnet.back_subnet_eu_west_3b.id,
     aws_subnet.back_subnet_eu_west_3c.id,
   ]
 
@@ -165,7 +105,6 @@ resource "aws_elb" "back_load_balancer" {
   ]
 
   subnets = [
-    # aws_subnet.back_subnet_eu_west_3b.id,
     aws_subnet.back_subnet_eu_west_3c.id,
   ]
 
@@ -176,7 +115,7 @@ resource "aws_elb" "back_load_balancer" {
     unhealthy_threshold = 5
     timeout = 59
     interval = 60
-    target = "HTTP:80/"   # FIXME
+    target = "HTTP:80/"
   }
 
   listener {

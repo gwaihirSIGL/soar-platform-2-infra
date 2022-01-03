@@ -63,7 +63,6 @@ resource "aws_security_group" "allow_ingress_mysql" {
     to_port     = 3306
     protocol    = "tcp"
     cidr_blocks = [
-      # aws_subnet.back_subnet_eu_west_3b.cidr_block,
       aws_subnet.back_subnet_eu_west_3c.cidr_block,
     ]
   }
