@@ -1,14 +1,14 @@
-resource "aws_subnet" "back_subnet_eu_west_3b" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "192.168.10.0/24"
-  availability_zone = "eu-west-3b"
+# resource "aws_subnet" "back_subnet_eu_west_3b" {
+#   vpc_id            = aws_vpc.main.id
+#   cidr_block        = "192.168.10.0/24"
+#   availability_zone = "eu-west-3b"
 
-  tags = {
-    Name = "soar_back_subnet_eu_west_3b"
-  }
+#   tags = {
+#     Name = "soar_back_subnet_eu_west_3b"
+#   }
 
-  depends_on = [aws_internet_gateway.igw]
-}
+#   depends_on = [aws_internet_gateway.igw]
+# }
 
 resource "aws_subnet" "back_subnet_eu_west_3c" {
   vpc_id            = aws_vpc.main.id
@@ -27,18 +27,13 @@ resource "aws_subnet" "back_subnet_eu_west_3c" {
 #   route_table_id = aws_route_table.root_to_igw.id
 # }
 
-# resource "aws_route_table_association" "igw_route_to_back_eu_west_3c" {
-#   subnet_id      = aws_subnet.back_subnet_eu_west_3c.id
-#   route_table_id = aws_route_table.root_to_igw.id
-# }
-
 # resource "aws_instance" "back_instance" {
 #   ami           = "ami-0d3c032f5934e1b41"
 #   instance_type = "t2.micro"
 #   subnet_id     = aws_subnet.back.id
 #   private_ip    = "192.168.1.50"
 
-#   security_groups = [
+#   vpc_security_group_ids = [
 #     aws_security_group.allow_ssh.id,
 #     aws_security_group.allow_every_outbound_traffic.id,
 #     aws_security_group.allow_http.id,
@@ -73,11 +68,6 @@ resource "aws_subnet" "back_subnet_eu_west_3c" {
 # EOF
 # }
 
-# resource "aws_eip" "back_lb" {
-#   instance   = aws_instance.back_instance.id
-#   vpc        = true
-#   depends_on = [aws_internet_gateway.igw]
-# }
 
 resource "aws_launch_configuration" "back_instance_template" {
   image_id      = "ami-0d3c032f5934e1b41"
@@ -149,7 +139,7 @@ resource "aws_autoscaling_group" "back_asg" {
   metrics_granularity = "1Minute"
 
   vpc_zone_identifier  = [
-    aws_subnet.back_subnet_eu_west_3b.id,
+    # aws_subnet.back_subnet_eu_west_3b.id,
     aws_subnet.back_subnet_eu_west_3c.id,
   ]
 
@@ -175,7 +165,7 @@ resource "aws_elb" "back_load_balancer" {
   ]
 
   subnets = [
-    aws_subnet.back_subnet_eu_west_3b.id,
+    # aws_subnet.back_subnet_eu_west_3b.id,
     aws_subnet.back_subnet_eu_west_3c.id,
   ]
 
@@ -183,9 +173,9 @@ resource "aws_elb" "back_load_balancer" {
 
   health_check {
     healthy_threshold = 2
-    unhealthy_threshold = 2
-    timeout = 40
-    interval = 45
+    unhealthy_threshold = 5
+    timeout = 59
+    interval = 60
     target = "HTTP:80/"   # FIXME
   }
 
@@ -208,12 +198,12 @@ resource "aws_autoscaling_policy" "back_policy_scale_up" {
 resource "aws_cloudwatch_metric_alarm" "back_instance_cpu_alarm_scale_up" {
   alarm_name = "back_instance_cpu_alarm_scale_up"
   comparison_operator = "GreaterThanOrEqualToThreshold"
-  evaluation_periods = "2"
+  evaluation_periods = 2
   metric_name = "CPUUtilization"
   namespace = "AWS/EC2"
-  period = "120"
+  period = 120
   statistic = "Average"
-  threshold = "60"
+  threshold = 60
 
   dimensions = {
     AutoScalingGroupName = aws_autoscaling_group.back_asg.name
@@ -236,12 +226,12 @@ resource "aws_autoscaling_policy" "back_policy_scale_down" {
 resource "aws_cloudwatch_metric_alarm" "back_instance_cpu_alarm_scale_down" {
   alarm_name = "back_instance_cpu_alarm_scale_down"
   comparison_operator = "LessThanOrEqualToThreshold"
-  evaluation_periods = "2"
+  evaluation_periods = 2
   metric_name = "CPUUtilization"
   namespace = "AWS/EC2"
-  period = "120"
+  period = 120
   statistic = "Average"
-  threshold = "10"
+  threshold = 10
 
   dimensions = {
     AutoScalingGroupName = aws_autoscaling_group.back_asg.name
@@ -253,36 +243,27 @@ resource "aws_cloudwatch_metric_alarm" "back_instance_cpu_alarm_scale_down" {
   ]
 }
 
-resource "aws_eip" "nat_gateway" {
-  vpc = true
-}
+module "back_nat_gateway" {
+  source = "./modules/nat_gateway"
 
-resource "aws_nat_gateway" "nat_gateway" {
-  allocation_id = aws_eip.nat_gateway.id
-  subnet_id = aws_subnet.back_subnet_eu_west_3c.id
-  tags = {
-    "Name" = "NatGateway"
-  }
-}
-
-output "nat_gateway_ip" {
-  value = aws_eip.nat_gateway.public_ip
-}
-
-resource "aws_route_table" "root_to_ngw" {
   vpc_id = aws_vpc.main.id
-  route {
-    cidr_block = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.nat_gateway.id
-  }
+  internet_gateway_id = aws_internet_gateway.igw.id
+  nat_gateway_subnet_cidr = "192.168.14.0/24"
+  nat_gateway_az = "eu-west-3c"
+  instances_to_root_subnet_id = aws_subnet.back_subnet_eu_west_3c.id
 }
 
-resource "aws_route_table_association" "igw_route_to_back_eu_west_3b" {
-  subnet_id      = aws_subnet.back_subnet_eu_west_3b.id
-  route_table_id = aws_route_table.root_to_ngw.id
+module "bastion_to_back_instances" {
+  source = "./modules/simple_host"
+
+  subnet_id = module.back_nat_gateway.nat_gateway_subnet_id
+  key_name = aws_key_pair.main.key_name
+  vpc_security_group_ids = [
+    aws_security_group.allow_ssh.id,
+    aws_security_group.allow_every_outbound_traffic.id,
+  ]
 }
 
-resource "aws_route_table_association" "igw_route_to_back_eu_west_3c" {
-  subnet_id      = aws_subnet.back_subnet_eu_west_3c.id
-  route_table_id = aws_route_table.root_to_ngw.id
+output "back_bastion_ip" {
+  value = module.bastion_to_back_instances.instance_ip
 }
