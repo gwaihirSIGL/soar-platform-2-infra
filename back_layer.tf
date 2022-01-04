@@ -11,7 +11,7 @@ resource "aws_subnet" "back_subnet_eu_west_3c" {
 }
 
 resource "aws_launch_configuration" "back_instance_template" {
-  image_id      = "ami-0d3c032f5934e1b41"
+  image_id      = data.aws_ami.backend_ami.id
   instance_type = "t2.micro"
 
   name_prefix = "back-instance-"
@@ -29,29 +29,37 @@ resource "aws_launch_configuration" "back_instance_template" {
   }
 
   user_data = <<EOF
-#!/bin/bash
-sleep 30 # wait for yum to be ready
-mkdir -p /app
-cd /app
-touch start
-sudo yum update -y 1>>server_logs.txt 2>&1
-touch updated
-sudo yum install -y git 1>>server_logs.txt 2>&1
-touch git
-curl --silent --location https://rpm.nodesource.com/setup_12.x | sudo bash - && sudo yum -y install nodejs 1>>server_logs.txt 2>&1
-touch npm
-git clone https://${var.gittoken}@github.com/gwaihirSIGL/soar-platform-2-back.git 1>>server_logs.txt 2>&1
-cd soar-platform-2-back/
-echo "PGHOST='${aws_eip.database_lb.public_dns}'
-POSTGRES_USER='${var.database_user}'
-POSTGRES_PASSWORD='${var.database_password}'
-POSTGRES_DB=soar
-POSTGRES_PORT=3306
-PORT=4002
-" > .env
-sudo npm i 1>>server_logs.txt 2>&1
-sudo npm start 1>>server_logs.txt 2>&1
+    touch ready_to_start_1
+    sleep 15
+    cd /app/soar-platform-2-back/
+    touch ready_to_start_2
+    sudo npm run start:prod 1>server_logs.txt 2>&1
 EOF
+
+#   user_data = <<EOF
+# #!/bin/bash
+# sleep 30 # wait for yum to be ready
+# mkdir -p /app
+# cd /app
+# touch start
+# sudo yum update -y 1>>server_logs.txt 2>&1
+# touch updated
+# sudo yum install -y git 1>>server_logs.txt 2>&1
+# touch git
+# curl --silent --location https://rpm.nodesource.com/setup_12.x | sudo bash - && sudo yum -y install nodejs 1>>server_logs.txt 2>&1
+# touch npm
+# git clone https://${var.gittoken}@github.com/gwaihirSIGL/soar-platform-2-back.git 1>>server_logs.txt 2>&1
+# cd soar-platform-2-back/
+# echo "PGHOST='${aws_eip.database_lb.public_dns}'
+# POSTGRES_USER='${var.database_user}'
+# POSTGRES_PASSWORD='${var.database_password}'
+# POSTGRES_DB=soar
+# POSTGRES_PORT=3306
+# PORT=4002
+# " > .env
+# sudo npm i 1>>server_logs.txt 2>&1
+# sudo npm start 1>>server_logs.txt 2>&1
+# EOF
 
 }
 
@@ -112,9 +120,9 @@ resource "aws_elb" "back_load_balancer" {
 
   health_check {
     healthy_threshold = 2
-    unhealthy_threshold = 5
-    timeout = 59
-    interval = 60
+    unhealthy_threshold = 10
+    timeout = 29
+    interval = 30
     target = "HTTP:80/"
   }
 
@@ -194,20 +202,49 @@ resource "aws_route_table_association" "route_to_igw" {
 #   internet_gateway_id = aws_internet_gateway.igw.id
 #   nat_gateway_subnet_cidr = "192.168.14.0/24"
 #   nat_gateway_az = "eu-west-3c"
-#   instances_to_root_subnet_id = aws_subnet.back_subnet_eu_west_3c.id
 # }
 
-# module "bastion_to_back_instances" {
-#   source = "./modules/simple_host"
+# module "back_ami_builder" {
+#   source = "./modules/ami_builder"
 
-#   subnet_id = module.back_nat_gateway.nat_gateway_subnet_id
-#   key_name = aws_key_pair.main.key_name
-#   vpc_security_group_ids = [
-#     aws_security_group.allow_ssh.id,
+#   vpc_id = aws_vpc.main.id
+#   subnet_cidr_block = "192.168.13.0/24"
+#   nat_gateway_id = module.back_nat_gateway.nat_gateway_id
+#   instance_vpc_security_group_ids = [
 #     aws_security_group.allow_every_outbound_traffic.id,
+#     aws_security_group.allow_ssh.id,
+#   ]
+#   key_name = aws_key_pair.main.key_name
+#   script_file = "./scripts/install_backend_and_shutdown.sh"
+#   script_variables = {
+#     PGHOST = aws_eip.database_lb.public_dns
+#     POSTGRES_USER = var.database_user
+#     POSTGRES_PASSWORD = var.database_password
+#     GIT_TOKEN = var.gittoken
+#   }
+
+#   depends_on = [
+#     aws_eip.database_lb,
+#     module.back_nat_gateway,
 #   ]
 # }
 
-# output "back_bastion_ip" {
-#   value = module.bastion_to_back_instances.instance_ip
-# }
+data "aws_ami" "backend_ami" {
+  owners           = ["self"]
+  name_regex       = "^backend_1.0.2$"
+}
+
+module "bastion_to_back_instances" {
+  source = "./modules/simple_host"
+
+  subnet_id = aws_subnet.back_subnet_eu_west_3c.id
+  key_name = aws_key_pair.main.key_name
+  vpc_security_group_ids = [
+    aws_security_group.allow_ssh.id,
+    aws_security_group.allow_every_outbound_traffic.id,
+  ]
+}
+
+output "back_bastion_ip" {
+  value = module.bastion_to_back_instances.instance_ip
+}

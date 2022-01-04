@@ -1,3 +1,5 @@
+# Build an instance, and associate it an ip
+
 resource "aws_instance" "instance" {
   instance_type = var.instance_type
   ami           = var.ami

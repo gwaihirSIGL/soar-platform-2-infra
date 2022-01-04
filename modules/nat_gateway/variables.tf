@@ -13,7 +13,3 @@ variable "internet_gateway_id" {
 variable "nat_gateway_subnet_cidr" {
   type = string
 }
-
-variable "instances_to_root_subnet_id" {
-    type = string
-}
