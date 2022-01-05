@@ -1,33 +1,21 @@
-resource "aws_subnet" "database" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "192.168.20.0/24"
-  availability_zone = "eu-west-3c"
-
-  tags = {
-    Name = "soar_database_subnet"
-  }
-
-  depends_on = [aws_internet_gateway.igw]
-}
-
-resource "aws_route_table_association" "igw-route-to-database" {
-  subnet_id      = aws_subnet.database.id
-  route_table_id = aws_route_table.route_to_igw.id
+module "provider" {
+    source = "../provider"
+    region = var.region
 }
 
 resource "aws_instance" "database_instance" {
   ami           = "ami-0d3c032f5934e1b41"
   instance_type = "t2.micro"
-  subnet_id     = aws_subnet.database.id
+  subnet_id     = var.database_subnet_id
   private_ip    = "192.168.20.50"
 
   vpc_security_group_ids = [
-    aws_security_group.allow_ssh.id,
-    aws_security_group.allow_every_outbound_traffic.id,
-    aws_security_group.allow_ingress_mysql.id,
+    var.allow_ingress_mysql_from_vpc_id,
+    var.allow_outbound_sec_group_id,
+    var.allow_ssh_sec_group_id,
   ]
 
-  key_name = aws_key_pair.main.key_name
+  key_name = var.ssh_pub_key_file_name
 
   tags = {
     Name = "soar_database_instance"
@@ -69,8 +57,7 @@ _EOF_
 EOF
 }
 
-resource "aws_eip" "database_lb" {
-  instance   = aws_instance.database_instance.id
-  vpc        = true
-  depends_on = [aws_internet_gateway.igw]
+resource "aws_eip_association" "database_lb" {
+  instance_id   = aws_instance.database_instance.id
+  allocation_id = var.database_allocation_ip_id
 }

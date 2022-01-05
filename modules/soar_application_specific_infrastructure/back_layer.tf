@@ -1,40 +1,28 @@
-resource "aws_subnet" "back_subnet_eu_west_3c" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "192.168.11.0/24"
-  availability_zone = "eu-west-3c"
-
-  tags = {
-    Name = "soar_back_subnet_eu_west_3c"
-  }
-
-  depends_on = [aws_internet_gateway.igw]
-}
-
 resource "aws_launch_configuration" "back_instance_template" {
-  image_id      = data.aws_ami.backend_ami.id
+  image_id      = "ami-0c9f70d5bb96a9da9"
   instance_type = "t2.micro"
 
   name_prefix = "back-instance-"
 
-  key_name = aws_key_pair.main.key_name
+  key_name = var.ssh_pub_key_file_name
 
   security_groups = [
-    aws_security_group.allow_ssh.id,
-    aws_security_group.allow_every_outbound_traffic.id,
-    aws_security_group.allow_http.id,
+    var.allow_ingress_mysql_from_vpc_id,
+    var.allow_outbound_sec_group_id,
+    var.allow_ssh_sec_group_id,
   ]
 
   lifecycle {
     create_before_destroy = true
   }
 
-  user_data = <<EOF
-    touch ready_to_start_1
-    sleep 15
-    cd /app/soar-platform-2-back/
-    touch ready_to_start_2
-    sudo npm run start:prod 1>server_logs.txt 2>&1
-EOF
+#   user_data = <<EOF
+#     touch ready_to_start_1
+#     sleep 15
+#     cd /app/soar-platform-2-back/
+#     touch ready_to_start_2
+#     sudo npm run start:prod 1>server_logs.txt 2>&1
+# EOF
 
 #   user_data = <<EOF
 # #!/bin/bash
@@ -72,7 +60,7 @@ resource "aws_autoscaling_group" "back_asg" {
   
   health_check_type    = "ELB"
   load_balancers = [
-    aws_elb.back_load_balancer.id,
+    var.back_lb_id,
   ]
 
   launch_configuration = aws_launch_configuration.back_instance_template.name
@@ -88,7 +76,7 @@ resource "aws_autoscaling_group" "back_asg" {
   metrics_granularity = "1Minute"
 
   vpc_zone_identifier  = [
-    aws_subnet.back_subnet_eu_west_3c.id,
+    var.back_subnet_id,
   ]
 
   lifecycle {
@@ -101,37 +89,6 @@ resource "aws_autoscaling_group" "back_asg" {
     propagate_at_launch = true
   }
 
-}
-
-# Load Balancer operating at OSI 4th layer
-resource "aws_elb" "back_load_balancer" {
-  name = "back-load-balancer"
-
-  security_groups = [
-    aws_security_group.allow_every_outbound_traffic.id,
-    aws_security_group.allow_http.id,
-  ]
-
-  subnets = [
-    aws_subnet.back_subnet_eu_west_3c.id,
-  ]
-
-  cross_zone_load_balancing   = true
-
-  health_check {
-    healthy_threshold = 2
-    unhealthy_threshold = 10
-    timeout = 29
-    interval = 30
-    target = "HTTP:80/"
-  }
-
-  listener {
-    lb_port = 80
-    lb_protocol = "http"
-    instance_port = 80
-    instance_protocol = "http"
-  }
 }
 
 resource "aws_autoscaling_policy" "back_policy_scale_up" {
@@ -190,58 +147,23 @@ resource "aws_cloudwatch_metric_alarm" "back_instance_cpu_alarm_scale_down" {
   ]
 }
 
-resource "aws_route_table_association" "route_to_igw" {
-  subnet_id      = aws_subnet.back_subnet_eu_west_3c.id
-  route_table_id = aws_route_table.route_to_igw.id
-}
+module "back_nat_gateway" {
+  source = "../nat_gateway"
 
-# module "back_nat_gateway" {
-#   source = "./modules/nat_gateway"
-
-#   vpc_id = aws_vpc.main.id
-#   internet_gateway_id = aws_internet_gateway.igw.id
-#   nat_gateway_subnet_cidr = "192.168.14.0/24"
-#   nat_gateway_az = "eu-west-3c"
-# }
-
-# module "back_ami_builder" {
-#   source = "./modules/ami_builder"
-
-#   vpc_id = aws_vpc.main.id
-#   subnet_cidr_block = "192.168.13.0/24"
-#   nat_gateway_id = module.back_nat_gateway.nat_gateway_id
-#   instance_vpc_security_group_ids = [
-#     aws_security_group.allow_every_outbound_traffic.id,
-#     aws_security_group.allow_ssh.id,
-#   ]
-#   key_name = aws_key_pair.main.key_name
-#   script_file = "./scripts/install_backend_and_shutdown.sh"
-#   script_variables = {
-#     PGHOST = aws_eip.database_lb.public_dns
-#     POSTGRES_USER = var.database_user
-#     POSTGRES_PASSWORD = var.database_password
-#     GIT_TOKEN = var.gittoken
-#   }
-
-#   depends_on = [
-#     aws_eip.database_lb,
-#     module.back_nat_gateway,
-#   ]
-# }
-
-data "aws_ami" "backend_ami" {
-  owners           = ["self"]
-  name_regex       = "^backend_1.0.2$"
+  vpc_id = var.vpc_id
+  internet_gateway_id = var.internet_gateway_id
+  nat_gateway_subnet_cidr = "192.168.14.0/24"
+  nat_gateway_az = "eu-west-3c"
 }
 
 module "bastion_to_back_instances" {
-  source = "./modules/simple_host"
+  source = "../simple_host"
 
-  subnet_id = aws_subnet.back_subnet_eu_west_3c.id
-  key_name = aws_key_pair.main.key_name
+  subnet_id = var.back_subnet_id
+  key_name = var.ssh_pub_key_file_name
   vpc_security_group_ids = [
-    aws_security_group.allow_ssh.id,
-    aws_security_group.allow_every_outbound_traffic.id,
+    var.allow_ssh_sec_group_id,
+    var.allow_outbound_sec_group_id,
   ]
 }
 
