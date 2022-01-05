@@ -19,4 +19,7 @@ resource "aws_instance" "instance" {
 resource "aws_eip" "instance_elastic_ip" {
   instance = aws_instance.instance.id
   vpc = true
+  tags = {
+    "Name" = var.instance_name
+  }
 }

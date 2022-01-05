@@ -84,6 +84,9 @@ module "security_groups" {
 
 resource "aws_eip" "database_eip" {
     vpc = true
+    tags = {
+        "Name" = "soar_database"
+    }
 }
 
 # Load Balancer operating at OSI 4th layer

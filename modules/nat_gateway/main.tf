@@ -25,6 +25,9 @@ resource "aws_route_table_association" "route_ngw_subnet_to_igw" {
 
 resource "aws_eip" "ngw_ip" {
   vpc = true
+  tags = {
+    "Name" = "nat_gateway"
+  }
 }
 
 resource "aws_nat_gateway" "ngw" {
