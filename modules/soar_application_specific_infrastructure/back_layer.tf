@@ -1,5 +1,5 @@
 resource "aws_launch_configuration" "back_instance_template" {
-  image_id      = "ami-0c9f70d5bb96a9da9"
+  image_id      = "ami-0d74219ca9a8d7253"
   instance_type = "t2.micro"
 
   name_prefix = "back-instance-"
@@ -152,21 +152,21 @@ module "back_nat_gateway" {
 
   vpc_id = var.vpc_id
   internet_gateway_id = var.internet_gateway_id
-  nat_gateway_subnet_cidr = "192.168.14.0/24"
+  nat_gateway_subnet_cidr = "192.168.15.0/24"
   nat_gateway_az = "eu-west-3c"
 }
 
-module "bastion_to_back_instances" {
-  source = "../simple_host"
+# module "bastion_to_back_instances" {
+#   source = "../simple_host"
 
-  subnet_id = var.back_subnet_id
-  key_name = var.ssh_pub_key_file_name
-  vpc_security_group_ids = [
-    var.allow_ssh_sec_group_id,
-    var.allow_outbound_sec_group_id,
-  ]
-}
+#   subnet_id = var.back_subnet_id
+#   key_name = var.ssh_pub_key_file_name
+#   vpc_security_group_ids = [
+#     var.allow_ssh_sec_group_id,
+#     var.allow_outbound_sec_group_id,
+#   ]
+# }
 
-output "back_bastion_ip" {
-  value = module.bastion_to_back_instances.instance_ip
-}
+# output "back_bastion_ip" {
+#   value = module.bastion_to_back_instances.instance_ip
+# }

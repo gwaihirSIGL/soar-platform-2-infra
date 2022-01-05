@@ -1,5 +1,5 @@
 resource "aws_launch_configuration" "front_instance_template" {
-  image_id      = "ami-013e3966f8522cff2"
+  image_id      = "ami-021bfb6a2cbd0d203"
   instance_type = "t2.micro"
 
   name_prefix = "front-instance-"
@@ -113,26 +113,17 @@ resource "aws_cloudwatch_metric_alarm" "front_instance_cpu_alarm_scale_down" {
   ]
 }
 
-module "front_nat_gateway" {
-  source = "../nat_gateway"
+# module "bastion_to_front_instances" {
+#   source = "../simple_host"
 
-  vpc_id = var.vpc_id
-  internet_gateway_id = var.internet_gateway_id
-  nat_gateway_subnet_cidr = "192.168.14.0/24"
-  nat_gateway_az = "eu-west-3c"
-}
+#   subnet_id = var.front_subnet_id
+#   key_name = var.ssh_pub_key_file_name
+#   vpc_security_group_ids = [
+#     var.allow_ssh_sec_group_id,
+#     var.allow_outbound_sec_group_id,
+#   ]
+# }
 
-module "bastion_to_front_instances" {
-  source = "../simple_host"
-
-  subnet_id = var.front_subnet_id
-  key_name = var.ssh_pub_key_file_name
-  vpc_security_group_ids = [
-    var.allow_ssh_sec_group_id,
-    var.allow_outbound_sec_group_id,
-  ]
-}
-
-output "front_bastion_ip" {
-  value = module.bastion_to_front_instances.instance_ip
-}
+# output "front_bastion_ip" {
+#   value = module.bastion_to_front_instances.instance_ip
+# }

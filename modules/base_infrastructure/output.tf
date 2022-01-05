@@ -35,13 +35,12 @@ output "back_lb_dns_name" {
 }
 
 output "front_lb_id" {
-    value = aws_elb.back_load_balancer.id
+    value = aws_elb.front_load_balancer.id
 }
 
 output "front_lb_dns_name" {
-    value = aws_elb.back_load_balancer.dns_name
+    value = aws_elb.front_load_balancer.dns_name
 }
-
 
 output "database_eip" {
     value = aws_eip.database_eip.public_ip
