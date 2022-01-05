@@ -33,11 +33,12 @@ Set the following environment variables for terraform:
 # Usage
 
 ```
-terraform plan
 terraform apply
 ssh -i soar-key ec2-user@<instance-ip>
 ```
-
-# WIP
-connect database to back
-conect back to front
+Steps:
+- Go in base_infrastructure/
+- Deploy ressources with terraform
+- Create backend and frontend application amis on AWS
+- Go in soar_application_specific_infrastructure/
+- Deploy resources with terraform
